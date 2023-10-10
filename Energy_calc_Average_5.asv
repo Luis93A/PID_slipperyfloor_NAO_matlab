@@ -1,0 +1,80 @@
+function TE = Energy_calc_Average_5(myCellArray)
+
+E1=[0 0 0 0];E2=0;E3=0;E4=0;E5=0;E6=0;E7=0;E8=0;E9=0;E10=0;E11=0;E12=0;E13=0;E14=0;E15=0;E16=0;E17=0;E18=0;E19=0;E20=0;
+
+numSets = numel(myCellArray);
+
+TE = cell(2,4); % initialize the array for storing the average of every 5 sets
+idx = 1; % initialize the index of the new array
+
+for i = 1:numSets
+    data = myCellArray{1,i}{2};
+    aux= floor(size(data,1)/4);
+    z=0;
+    for j= 1:1:4
+    data = data(1+(aux*z):aux*j,:);
+    %code for processing the data
+    %torso
+        Pt1 = data(:,3) .* data(:,1);
+        Pt2 = data(:,4) .* data(:,2);
+    %leftleg
+        Pll1 = data(:,10) .* data(:,5);  
+        Pll2 = data(:,11) .* data(:,6);
+        Pll3 = data(:,12) .* data(:,7);
+        Pll4 = data(:,13) .* data(:,8);
+        Pll5 = data(:,14) .* data(:,9);
+    %rightleg    
+        Prl1 = data(:,20) .* data(:,15);
+        Prl2 = data(:,21) .* data(:,16);
+        Prl3 = data(:,22) .* data(:,17);
+        Prl4 = data(:,23) .* data(:,18);
+        Prl5 = data(:,24) .* data(:,19);
+    %leftarm
+        Pla1 = data(:,29) .* data(:,25);
+        Pla2 = data(:,30) .* data(:,26);
+        Pla3 = data(:,31) .* data(:,27);
+        Pla4 = data(:,32) .* data(:,28);
+    %rightarm
+        Pra1 = data(:,37) .* data(:,33);
+        Pra2 = data(:,38) .* data(:,34);
+        Pra3 = data(:,39) .* data(:,35);
+        Pra4 = data(:,40) .* data(:,36);
+        
+        T = 0:0.01:(size(Pt1,1)-1)/100;
+        E1(j) = E1(j) + trapz(T, Pt1);
+        E2(j) = E2(j)+ trapz(T, Pt2);
+        E3(j) = E3(j)+ trapz(T, Pll1);
+        E4(j) = E4(j)+ trapz(T, Pll2);
+        E5(j) = E5(j)+ trapz(T, Pll3);
+        E6(j) = E6(j)+ trapz(T, Pll4);
+        E7(j) = E7(j)+ trapz(T, Pll5);
+        E8(j) = E8(j) +trapz(T, Prl1);
+        E9(j) = E9(j) +trapz(T, Prl2);
+        E10(j) = E10(j)+ trapz(T, Prl3);
+        E11(j) = E11(j) +trapz(T, Prl4);
+        E12(j) = E12(j)+ trapz(T, Prl5);
+        E13(j) = E13(j)+ trapz(T, Pla1);
+        E14(j) = E14(j)+ trapz(T, Pla2);
+        E15(j) = E15(j)+ trapz(T, Pla3);
+        E16(j) = E16(j)+ trapz(T, Pla4);
+        E17(j) = E17(j) +trapz(T, Pra1);
+        E18(j) = E18(j)+ trapz(T, Pra2);
+        E19(j) = E19(j)+ trapz(T, Pra3);
+        E20(j) = E20(j)+ trapz(T, Pra4);
+        
+        
+    if mod(i, 5) == 0 % if 5 sets have been processed
+        % calculate the average of the 5 sets and store it in the new array
+        varname= myCellArray{1,i}{1};
+        TE{idx}(j) = {varname,((E1(j)+E2(j)+E3(j)+E4(j)+E5(j)+E6(j)+E7(j)+E8(j)+E9(j)+E10(j)+E11(j)+E12(j)+E13(j)+E14(j)+E15(j)+E16(j)+E17(j)+E18(j)+E19(j)+E20(j)) / 5)};
+        idx = idx + 1;
+        % reset the energy variables for the next 5 sets
+        E1 = 0; E2 = 0; E3 = 0; E4 = 0; E5 = 0; E6 = 0; E7 = 0; E8 = 0; E9 = 0; E10 = 0;
+        E11 = 0; E12 = 0; E13 = 0; E14 = 0; E15 = 0; E16 = 0; E17 = 0; E18 = 0; E19 = 0; E20 = 0;
+    end
+    z=z+1;
+    end
+    end
+
+
+end

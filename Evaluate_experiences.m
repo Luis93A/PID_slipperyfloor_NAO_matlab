@@ -1,0 +1,191 @@
+%% Evaluate Humanoid walking experience 
+
+% Humanoid NAO walks on gazebo on top of a sliperry floor with a PID
+% controller to fix its orientation when the robot slips. 
+% the following structure analyses the data and plot the normalized result
+% for each experience. The result is a representation of 4 weighted metrics
+% to evaluate the performance of the humanoid experience. 
+
+% Folder Experience_PID has the "energy" (angular velocity and torque) data
+%        Stab_PID has the stability data (zmp) and experience time
+
+%NOTE: 
+
+% To adapt the controller for a more slippery floor, 
+% one must adjust the P value to make the controller more responsive. 
+% This is because a more slippery surface will cause the system to respond more slowly
+% to changes in orientation. Alternatively, it may also be necessary to adjust the D value
+% to reduce overshoot and settling time, as the system may be more prone to oscillations 
+% on a slippery surface.
+
+% The code to extract the data that is now inside these folders is developed in Python.
+% It extracts the relevant data from a big big log file that is created with each
+% experience developed in gazebo. (Log file has timestamps, all joint
+% angles, forces, energy data, stability data and much more.)
+% The python code and log files are inside the main folder. hard coded code
+% since log file kept changing and needs to extract different variables as well. 
+
+%PID implementation in C (parts of the code) also included in the files
+
+%% to do
+% replace "X" name by "P" or "I" or "D" depending on which parameter we are
+% optimizing 
+
+% create variable with the corresponding leter and make it as an input in section:
+% section : calculate energy, time and stability vars  
+
+%% clean 
+clc, clear all, close all
+
+%% vars 
+%weight of each metric
+%w1 -> energy ; w2 -> time; 
+%w3 and w4 -> RMSE zmp_X and zmp_Y w5 and w6 -> RMSE comx and com y 
+
+w1=1/3;w2=1/3;w3=1/12;
+w4=w3;
+w5=w4; w6=w4;
+%w1=3/8;w2=3/8;w3=1/8;w4=1/8;
+%all these parameters 
+%w1=3/8;w2=1/8;w3=1/4;w4=1/4; 
+%have the same result as
+%w1=1/3;w2=1/3;w3=1/6;w4=1/6;
+% 1/3 for each metric ;
+
+%% IMP for analysis select bellow: 
+
+%% Select P, I or D to watch results : Var P =1 Var I =2 Var D = 3 ;   Var = 4 - 4floor tests inside floor1
+%% Always:
+
+%1- choose Var (P I or D)
+%2- choose floor ( 1 2 3 or 4)
+%3- adapt numVars based on how many P I or D variations we are evaluating =
+%number of files *5 
+
+Var= 4; 
+
+floor_name = "floor1";
+folderName_TS = floor_name + '/Stab_PID';
+
+% folder name to split  P , I, D optimization, to make plot clean with
+% less results
+if Var ==1
+    % select 'stab_PID' for P results
+    folderName_TS = floor_name + '/Stab_PID';
+    folderName_E = floor_name + '/Experience_PID';
+    % so far (N*5)-1  
+    % where, N = P variations and 5 is the number of repetitions and -1 (way functions are created) 
+    numVars = 56;
+elseif Var == 2
+    % select 'stab_IPD' for I results
+    folderName_TS = floor_name + '/Stab_IPD';
+    folderName_E = floor_name + '/Experience_IPD';
+    % so far "" "" ""
+    numVars = 36;
+elseif Var == 3
+    % select 'stab_DPI' for D results
+    folderName_TS = floor_name + '/Stab_DPI';
+    folderName_E = floor_name + '/Experience_DPI';
+    numVars = 31;
+elseif Var == 4
+    folderName_TS = floor_name + '/Stab_test';
+    folderName_E= floor_name + '/Test_PID';
+    numVars = 11;
+end
+
+
+%% calculate energy, time and stability vars
+EnergyArray = Energy_calc(numVars,folderName_E);
+TimeArray = Time_calc(numVars,folderName_TS);
+StabilityArray = Stab_calc(numVars,folderName_TS);
+Stability1Array = Stab1_calc(numVars,folderName_TS);
+
+%% average for each 5 repetitions
+TE = Energy_calc_Average_5(EnergyArray);
+Tim = Time_calc_Average_5(TimeArray);
+[zmpx,zmpy] = Stability_calc_Average_5(StabilityArray);
+[comx,comy] = Stability_calc_Average_5(Stability1Array);
+%% normalized results representation bar plot
+figure(1)
+nTE = normalized_results(TE);
+title('normalized Energy');
+figure(2)
+nTim = normalized_results(Tim);
+title('normalized Time');
+figure(3)
+nzmpx = normalized_results(zmpx);
+title('normalized zmp x');
+figure(4)
+nzmpy = normalized_results(zmpy);
+title('normalized zmp y');
+figure(5)
+ncomx = normalized_results(comx);
+title('normalized com x');
+figure(6)
+ncomy = normalized_results(comy);
+title('normalized com y');
+
+
+
+%% results bar plot
+% the smallest value represents the best P or I or D parameter for our PID controller
+
+figure(7)
+Res= plotR(nTE,nTim,nzmpx,nzmpy,ncomx,ncomy,w1,w2,w3,w4,w5,w6)
+title('result');
+
+
+%% Conclusions
+%so far
+
+%floor 1
+%So far P = 0.98 seems to be the best overall ..  
+% "" "" I = 0.00 seems to be the best "" ""   ..
+% "" "" D = 0.01 seems to be the best "" ""   ..
+
+%floor 4
+% P = 1.04
+% D = 0.01
+% I = 0.00
+
+%floor 3 
+% P = 1.015
+% D = 0.01
+% I = 0.00
+
+%floor 2 
+% P = 0.99
+% D = 0.01
+% I = 0.00
+
+
+% Extract values from "TE"
+values = cellfun(@(x) x{2}, TE); % Extract second element (values) from each cell array
+
+% Create x-axis values for bars
+x = [1 2 3 4]; % Repeat 1:2 four times
+
+% Create bar plot
+bar(x, values); % Create bar plot with x-values and corresponding values
+xlabel('X'); % Set x-axis label
+ylabel('Value'); % Set y-axis label
+title('Bar Plot of TE Values'); % Set plot title
+ 
+MV = [0.9894    0.9983     1      1     
+      1 0.9815 0.9373 0.9137      
+      0.9931 0.9032 0.7410 0.5002]     
+  
+  result = sum(MV(:)) / 12
+  
+MF= [  1 1 0.9997 0.9938
+     0.9999 1    1      1
+     1 1 1 1 ]
+
+result = sum(MF(:)) / 12
+
+MV= [ 0.9997  0.9773 0.8716 0.7568]
+ 
+  result = sum(MV(:)) / 4
+MF = [0.9999 0.9998 0.9996 0.9987]
+
+result = sum(MF(:)) / 4
